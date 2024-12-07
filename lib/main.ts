@@ -1,17 +1,20 @@
-import { is, List, Map, Set } from "immutable"; // TODO: ImmutableJS weights 65kB (on 66kB...)
 import { currentComponent, withDomTypeIdentifier } from "./preact_integration";
+
+import { castDraft, enableMapSet, Immutable, produce } from "immer";
 import { Component } from "preact";
 
-export type AppState = Map<string | symbol, any>;
+enableMapSet();
+
+export type AppState = Immutable<Map<string | symbol, any>>;
 export type Identifier = symbol;
 export type SubscriberIdentifier = Identifier;
 export type SideEffectIdentifier = Identifier;
 export type EffectHandlerIdentifier = Identifier;
 export interface SubscriptionValue<T> {
-  value: T;
+  readonly value: T;
 }
 export type Subscription<T> = {
-  __subscriberId: Identifier;
+  readonly __subscriberId: SubscriberIdentifier;
   readonly value: SubscriptionValue<T>;
 }
 
@@ -19,38 +22,38 @@ export type Subscription<T> = {
  * Specific to preact
  */
 interface InternalSubscriptionValue<T> extends SubscriptionValue<T> {
-  type: null;
-  __b: number;
-  constructor: undefined;
-  __type: typeof withDomTypeIdentifier;
+  readonly type: null;
+  readonly __b: number;
+  readonly constructor: undefined;
+  readonly __type: typeof withDomTypeIdentifier;
 }
 
 type SubscriberFn<T, R> = (stateOrDeps: T, ...args: any[]) => R;
 type Subscriber<T, R> = {
-  id: Identifier;
-  dependsOn: List<Identifier>;
-  fn: SubscriberFn<T, R>;
-  lastValue: any; // TODO: Rename it?
-  isOutdated: boolean;
-  components: Set<Component>;
+  readonly id: Identifier;
+  readonly dependsOn: SubscriberIdentifier[];
+  readonly fn: SubscriberFn<T, R>;
+  readonly value: any;
+  readonly isOutdated: boolean;
+  readonly components: Set<Component>;
 };
 
 type SideEffectFn = (...args: any[]) => void;
 type SideEffect = {
-  id: Identifier;
-  fn: SideEffectFn;
+  readonly id: Identifier;
+  readonly fn: SideEffectFn;
 };
 
 export type EffectHandlerResponse = {
-  [key: Identifier]: any;
+  readonly [key: Identifier]: any;
 };
 export type EffectHandlerFn = (appState: AppState, ...args: any[]) => EffectHandlerResponse;
 
-let appState: AppState = Map();
-let subscribers = Map<Identifier, Subscriber<any, any>>();
-let sideEffects = Map<Identifier, SideEffect>();
-let effectHandlers = Map<Identifier, EffectHandlerFn>();
-let subscriberToComponents = Map<Identifier, List<Component>>();
+let appState: AppState = new Map();
+let subscribers: Immutable<Map<SubscriberIdentifier, Subscriber<any, any>>> = new Map();
+let sideEffects: Immutable<Map<SideEffectIdentifier, SideEffect>> = new Map();
+let effectHandlers: Immutable<Map<EffectHandlerIdentifier, EffectHandlerFn>> = new Map();
+let subscriberToComponents: Immutable<Map<Identifier, Component[]>> = new Map();
 
 function registerSubscriber<T>(
   fn: SubscriberFn<AppState, T>
@@ -70,13 +73,15 @@ function registerSubscriber<T, R>(
   const realFn = (fn || depsOrFn) as SubscriberFn<T, R>;
   const deps = (fn ? depsOrFn : []) as SubscriberIdentifier[];
 
-  subscribers = subscribers.set(id, {
-    id: id,
-    dependsOn: List.of(...deps),
-    fn: realFn,
-    lastValue: undefined,
-    isOutdated: true,
-    components: Set(),
+  subscribers = produce(subscribers, (subscribers) => {
+    subscribers.set(id, {
+      id: id,
+      dependsOn: deps,
+      fn: realFn,
+      value: undefined,
+      isOutdated: true,
+      components: new Set(),
+    });
   });
 
   return id;
@@ -85,35 +90,43 @@ function registerSubscriber<T, R>(
 function registerSideEffect(fn: SideEffectFn): SideEffectIdentifier {
   const id = Symbol("with-dom-side-effect");
 
-  sideEffects = sideEffects.set(id, {
-    id: id,
-    fn: fn,
+  sideEffects = produce(sideEffects, (sideEffects) => {
+    sideEffects.set(id, {
+      id: id,
+      fn: fn,
+    });
   });
 
   return id;
 }
 
 function getSubscriberDirectChildren(
-  subscriber: Subscriber<any, any>
-): List<Subscriber<any, any>> {
-  return subscribers
-    .filter(s => s.dependsOn.contains(subscriber.id))
-    .toList();
+  subscriber: Immutable<Subscriber<any, any>>
+): Immutable<Subscriber<any, any>[]> {
+  return [
+    ...subscribers.values(),
+  ].filter(s => s.dependsOn.includes(subscriber.id));
 }
 
-function getAllSubscribersChildren(subs: List<Subscriber<any, any>>): List<Subscriber<any, any>> {
-  return subs.reduce((acc, el) => {
-    const children = getSubscriberDirectChildren(el);
+function getAllSubscribersChildren(
+  subscribers: Immutable<Subscriber<any, any>[]>
+): Immutable<Subscriber<any, any>[]> {
+  return subscribers.reduce((acc, subscriber) => {
 
     // TODO: Verify stack overflow
-    return acc.push(
-      ...children,
-      ...getAllSubscribersChildren(children));
-  }, List());
+
+    return produce(acc, (acc) => {
+      const directChildren = getSubscriberDirectChildren(subscriber);
+      acc.push(...castDraft(directChildren));
+
+      const allChildren = getAllSubscribersChildren(directChildren);
+      acc.push(...castDraft(allChildren));
+    });
+  }, [] as Immutable<Array<Subscriber<any, any>>>);
 }
 
 const updateAppState = registerSideEffect((newState: AppState) => {
-  if (is(appState, newState)) {
+  if (appState === newState) {
     console.error(
       "\"updateAppState\" has been called without any modification.\n" +
       "This is a bad smell and could lead to potential performance issues."
@@ -122,9 +135,9 @@ const updateAppState = registerSideEffect((newState: AppState) => {
 
   appState = newState;
 
-  const rootSubs = subscribers.filter(s => s.dependsOn.isEmpty());
+  const rootSubs = [...subscribers.values()].filter(s => s.dependsOn.length === 0);
 
-  let outdatedSubs = List<Subscriber<any, any>>();
+  let outdatedSubs: Immutable<Subscriber<any, any>[]> = [];
 
   /**
    * Every time the appState is updated, we compute all of the subscribers
@@ -141,47 +154,60 @@ const updateAppState = registerSideEffect((newState: AppState) => {
 
     // TODO: because of this check, we have to make sure that every value in 
     //       the state can be diffed this way (i.e. only primitives + immutable)
-    if (!is(rootSub.lastValue, newValue)) {
-      outdatedSubs = outdatedSubs.push(...getSubscriberDirectChildren(rootSub));
+    if (rootSub.value !== newValue) {
 
+      outdatedSubs = produce(outdatedSubs, (outdatedSubs) => {
+        outdatedSubs.push(...castDraft(getSubscriberDirectChildren(rootSub)));
+      });
+
+      // TODO: Fix, does not work
       rootSub.components.forEach(c => c.setState({}));
 
-      subscriberToComponents.get(rootSub.id, List<Component>()).forEach(c => c.setState({}));
+      if (subscriberToComponents.has(rootSub.id)) {
+        subscriberToComponents.get(rootSub.id)!.forEach(c => c.setState({}));
+      }
     }
 
     return {
       ...rootSub,
       isOutdated: false,
-      lastValue: newValue,
+      value: newValue,
     };
   });
 
-  subscribers = updatedRootSubs.reduce((acc, el) => {
-    return acc.set(el.id, el);
-  }, subscribers);
+  subscribers = produce(subscribers, (subscribers) => {
+    updatedRootSubs.forEach(el => {
+      subscribers.set(el.id, castDraft(el));
+    });
+  });
 
   const allOutdatedSubs = outdatedSubs.concat(
     ...getAllSubscribersChildren(outdatedSubs)
   );
 
-  subscribers = allOutdatedSubs.reduce((acc, outdatedSub) => {
-    // Notifies all of the related components about the update
-    outdatedSub.components.forEach(c => c.setState({}));
+  subscribers = produce(subscribers, (subscribers) => {
+    allOutdatedSubs.forEach(outdatedSub => {
+      outdatedSub.components.forEach(c => c.setState({}));
 
-    subscriberToComponents.get(outdatedSub.id, List<Component>()).forEach(c => c.setState({}));
+      if (subscriberToComponents.has(outdatedSub.id)) {
+        subscriberToComponents.get(outdatedSub.id)!.forEach(c => c.setState({}));
+      }
 
-    return acc.set(outdatedSub.id, {
-      ...outdatedSub,
-      isOutdated: true,
-      lastValue: undefined,
-    });
-  }, subscribers);
+      subscribers.set(outdatedSub.id, castDraft({
+        ...outdatedSub,
+        isOutdated: true,
+        value: undefined,
+      }));
+    })
+  });
 });
 
 function registerEffectHandler(fn: EffectHandlerFn): EffectHandlerIdentifier {
   const id = Symbol("with-dom-effect-handler");
 
-  effectHandlers = effectHandlers.set(id, fn);
+  effectHandlers = produce(effectHandlers, (effectHandlers) => {
+    effectHandlers.set(id, fn);
+  });
 
   return id;
 }
@@ -221,7 +247,9 @@ function dispatchEvent(id: EffectHandlerIdentifier, ...args: any[]): void {
  * Retrieves all of the dependencies from the subscribers to the root subscribers.
  * The order of the output matters: from the root of the tree to the leaves
  */
-function getAllDependencies(subs: List<Subscriber<any, any>>): List<Subscriber<any, any>> {
+function getAllDependencies(
+  subs: Immutable<Subscriber<any, any>[]>
+): Immutable<Subscriber<any, any>[]> {
   return subs.reduce((acc, el) => {
     const parents = el.dependsOn.map(s => {
       const parent = subscribers.get(s);
@@ -233,8 +261,11 @@ function getAllDependencies(subs: List<Subscriber<any, any>>): List<Subscriber<a
       return parent;
     });
 
-    return acc.push(...parents, ...getAllDependencies(parents));
-  }, List());
+    return produce(acc, (acc) => {
+      acc.push(...castDraft(parents));
+      acc.push(...castDraft(getAllDependencies(parents)));
+    });
+  }, [] as Immutable<Subscriber<any, any>[]>);
 
 
   // TODO: Put back this, but working:
@@ -242,74 +273,65 @@ function getAllDependencies(subs: List<Subscriber<any, any>>): List<Subscriber<a
     .flatMap(sub => sub.dependsOn.map(subId => subscribers.get(subId)))
     .filter(sub => !!sub);
 
-  return List([
+  return [
     ...getAllDependencies(directDeps),
     ...directDeps,
-  ]);
+  ];
 }
 
 function computeAllDependenciesValues(
-  subscriber: Subscriber<any, any>,
+  subscriber: Immutable<Subscriber<any, any>>,
   ...args: any[]
 ): typeof subscribers {
-  const allParents = getAllDependencies(List.of(subscriber));
+  const allParents = getAllDependencies([subscriber]);
 
-  return allParents
-    .reverse()
-    .reduce((subscribers, sub) => {
-
-      if (!sub.isOutdated) {
-        return subscribers;
+  return produce(subscribers, (subscribers) => {
+    [...allParents].reverse().forEach(parent => {
+      if (!parent.isOutdated) {
+        return;
       }
 
-      if (sub.dependsOn.isEmpty()) {
-        return subscribers.set(sub.id, {
-          ...sub,
-          lastValue: sub.fn(appState, ...args),
+      if (parent.dependsOn.length === 0) {
+        subscribers.set(parent.id, {
+          ...castDraft(parent),
+          value: parent.fn(appState, ...args),
           isOutdated: false,
         });
+        return;
       }
 
-      const parents = sub.dependsOn.map(id => subscribers.get(id));
+      const parents = parent.dependsOn.map(id => subscribers.get(id));
 
-      // TODO: Remove
-      if (!parents.every(el => !!el)) {
-        throw Error("One parent was not found");
-      }
-
-      // TODO: Remove
-      if (!parents.every(el => !el?.isOutdated)) {
-        throw Error("One of the parent is outdated...");
-      }
-
-      return subscribers.set(sub.id, {
-        ...sub,
-        lastValue: sub.fn(parents.map(el => el?.lastValue)), // TODO: There is something wrong with args
+      subscribers.set(parent.id, {
+        ...castDraft(parent),
+        value: parent.fn(parents.map(el => el?.value)), // TODO: There is something wrong with args
         isOutdated: false,
       });
-    }, subscribers);
+    });
+  });
 }
 
-function computeSubscriberValue(subscriber: Subscriber<any, any>, ...args: any[]): any {
+function computeSubscriberValue(subscriber: Immutable<Subscriber<any, any>>, ...args: any[]): any {
   const updatedDeps = computeAllDependenciesValues(subscriber); // TODO: args
 
   const directDeps = subscriber.dependsOn.map(id => updatedDeps.get(id));
 
-  // TODO: Remove
-  if (!directDeps.every(el => !el?.isOutdated)) {
-    throw Error("One of the parent is outdated...");
-  }
-
-  const state = directDeps.isEmpty()
+  const state = directDeps.length === 0
     ? appState
-    : directDeps.map(el => el?.lastValue);
+    : directDeps.map(el => el?.value);
 
   const value = subscriber.fn(state, ...args);
 
-  subscribers = updatedDeps.set(subscriber.id, {
-    ...subscriber,
-    lastValue: value,
-    isOutdated: false,
+  subscribers = produce(subscribers, (subscribers) => {
+    updatedDeps.forEach(u => {
+      subscribers.set(u.id, castDraft(u));
+    });
+
+    subscribers.set(subscriber.id, {
+      ...castDraft(subscriber),
+      value: value,
+      isOutdated: false,
+    });
   });
 
   return value;
@@ -328,9 +350,9 @@ function formatSubscriptionValue<T>(value: T): InternalSubscriptionValue<T> {
 function subscribe<T>(
   subscriberId: SubscriberIdentifier,
   ...args: any[]
-): Subscription<T> {
+): Immutable<Subscription<T>> {
   return {
-    get value(): InternalSubscriptionValue<T> {
+    get value(): Immutable<InternalSubscriptionValue<T>> {
       const sub = subscribers.get(this.__subscriberId);
 
       if (!sub) {
@@ -339,16 +361,25 @@ function subscribe<T>(
 
       if (currentComponent) {
         // TODO: Is erased
-        subscribers = subscribers.update(this.__subscriberId, sub => ({
-          ...sub,
-          components: sub!.components.add(currentComponent!),
-        } as Subscriber<any, any>));
 
-        subscriberToComponents = subscriberToComponents.update(this.__subscriberId, x => {
-          return (x ?? List()).push(currentComponent!);
+        subscribers = produce(subscribers, (subscribers) => {
+          subscribers.set(this.__subscriberId, {
+            ...castDraft(sub),
+            components: castDraft(
+              produce(sub.components, (components) => {
+                components.add(castDraft(currentComponent!));
+              })
+            ),
+          });
+        })
+
+        subscriberToComponents = produce(subscriberToComponents, (subscriberToComponents) => {
+          const prev = subscriberToComponents.get(this.__subscriberId) ?? [];
+          prev.push(castDraft(currentComponent!));
+          subscriberToComponents.set(this.__subscriberId, prev);
         });
-
       } else {
+        // TODO: Allow to call with a callback fn instead
         console.warn("Subscribe was called outside a reactive context.");
       }
 
@@ -357,7 +388,7 @@ function subscribe<T>(
         return formatSubscriptionValue(value);
       }
 
-      return formatSubscriptionValue(sub.lastValue);
+      return formatSubscriptionValue(sub.value);
     },
     __subscriberId: subscriberId, // TODO: Can it be removed?
   }
