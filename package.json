@@ -1,0 +1,35 @@
+{
+  "name": "@with-dom/with-dom",
+  "private": true,
+  "version": "0.0.1-13",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/with-dom.umd.cjs",
+  "module": "./dist/with-dom.js",
+  "exports": {
+    ".": {
+      "types": "./dist/with-dom.d.ts",
+      "import": "./dist/with-dom.js",
+      "require": "./dist/with-dom.umd.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "tsc-version": "tsc --version",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "immutable": "5.0.3",
+    "preact": "^10.25.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.1",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.1",
+    "vite-plugin-dts": "^4.3.0"
+  }
+}
