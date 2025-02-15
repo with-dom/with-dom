@@ -2,6 +2,7 @@ import { currentComponent, withDomTypeIdentifier } from "./preact_integration";
 
 import { castDraft, enableMapSet, Immutable, produce } from "immer";
 import { Component } from "preact";
+import { areEquivalent } from "./areEquivalent";
 
 enableMapSet();
 
@@ -14,7 +15,6 @@ export interface SubscriptionValue<T> {
   readonly value: T;
 }
 export type Subscription<T> = {
-  readonly __subscriberId: SubscriberIdentifier;
   readonly value: SubscriptionValue<T>;
 }
 
@@ -133,7 +133,6 @@ const updateAppState = registerSideEffect((newState: AppState) => {
     );
   }
 
-  appState = newState;
 
   const rootSubs = [...subscribers.values()].filter(s => s.dependsOn.length === 0);
 
@@ -146,16 +145,9 @@ const updateAppState = registerSideEffect((newState: AppState) => {
   // TODO: Optimize by computing only the root subs that have some subscribers
   //       in their tree
   const updatedRootSubs = rootSubs.map(rootSub => {
-    if (rootSub.isOutdated) {
-      return rootSub;
-    }
+    const newValue = rootSub.fn(newState);
 
-    const newValue = rootSub.fn(appState);
-
-    // TODO: because of this check, we have to make sure that every value in 
-    //       the state can be diffed this way (i.e. only primitives + immutable)
-    if (rootSub.value !== newValue) {
-
+    if (!areEquivalent(rootSub.value, newValue)) {
       outdatedSubs = produce(outdatedSubs, (outdatedSubs) => {
         outdatedSubs.push(...castDraft(getSubscriberDirectChildren(rootSub)));
       });
@@ -200,6 +192,8 @@ const updateAppState = registerSideEffect((newState: AppState) => {
       }));
     })
   });
+
+  appState = newState;
 });
 
 function registerEffectHandler(fn: EffectHandlerFn): EffectHandlerIdentifier {
@@ -351,47 +345,42 @@ function subscribe<T>(
   subscriberId: SubscriberIdentifier,
   ...args: any[]
 ): Immutable<Subscription<T>> {
-  return {
-    get value(): Immutable<InternalSubscriptionValue<T>> {
-      const sub = subscribers.get(this.__subscriberId);
+  const sub = subscribers.get(subscriberId);
 
-      if (!sub) {
-        throw Error("Could not find the related Subscriber");
-      }
-
-      if (currentComponent) {
-        // TODO: Is erased
-
-        subscribers = produce(subscribers, (subscribers) => {
-          subscribers.set(this.__subscriberId, {
-            ...castDraft(sub),
-            components: castDraft(
-              produce(sub.components, (components) => {
-                components.add(castDraft(currentComponent!));
-              })
-            ),
-          });
-        })
-
-        subscriberToComponents = produce(subscriberToComponents, (subscriberToComponents) => {
-          const prev = subscriberToComponents.get(this.__subscriberId) ?? [];
-          prev.push(castDraft(currentComponent!));
-          subscriberToComponents.set(this.__subscriberId, prev);
-        });
-      } else {
-        // TODO: Allow to call with a callback fn instead
-        console.warn("Subscribe was called outside a reactive context.");
-      }
-
-      if (sub.isOutdated) {
-        const value = computeSubscriberValue(sub, ...args);
-        return formatSubscriptionValue(value);
-      }
-
-      return formatSubscriptionValue(sub.value);
-    },
-    __subscriberId: subscriberId, // TODO: Can it be removed?
+  if (!sub) {
+    throw Error("Could not find the related Subscriber");
   }
+
+  if (currentComponent) {
+    // TODO: Is erased
+
+    subscribers = produce(subscribers, (subscribers) => {
+      subscribers.set(subscriberId, {
+        ...castDraft(sub),
+        components: castDraft(
+          produce(sub.components, (components) => {
+            components.add(castDraft(currentComponent!));
+          })
+        ),
+      });
+    })
+
+    subscriberToComponents = produce(subscriberToComponents, (subscriberToComponents) => {
+      const prev = subscriberToComponents.get(subscriberId) ?? [];
+      prev.push(castDraft(currentComponent!));
+      subscriberToComponents.set(subscriberId, prev);
+    });
+  } else {
+    // TODO: Allow to call with a callback fn instead
+    console.warn("Subscribe was called outside a reactive context.");
+  }
+
+  if (sub.isOutdated) {
+    const value = computeSubscriberValue(sub, ...args);
+    return formatSubscriptionValue(value);
+  }
+
+  return formatSubscriptionValue(sub.value);
 }
 
 export {

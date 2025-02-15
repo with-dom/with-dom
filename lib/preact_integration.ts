@@ -53,7 +53,7 @@ function isWithDomSubscription(object: any) {
 
 function replaceWithDomSubscription(propValue: any) {
   return isWithDomSubscription(propValue)
-    ? propValue.value.value + "" // TODO: value.value or just value?
+    ? propValue.value + ""
     : propValue;
 }
 
