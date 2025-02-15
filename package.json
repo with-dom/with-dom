@@ -20,11 +20,14 @@
     "tsc-version": "tsc --version",
     "preview": "vite preview"
   },
+  "peerDependencies": {
+    "preact": "10.x"
+  },
   "dependencies": {
-    "immer": "^10.1.1",
-    "preact": "^10.25.0"
+    "immer": "10.x"
   },
   "devDependencies": {
+    "@babel/core": "7.x",
     "@preact/preset-vite": "^2.9.1",
     "@types/node": "^22.10.1",
     "typescript": "^5.7.2",
