@@ -1,0 +1,38 @@
+name: Release package to Github Packages (testing purposes)
+
+on:
+  push:
+    branches-ignore:
+      - 'master'
+
+jobs:
+  publish-gpr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com/
+      - name: yarn install
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install
+      - name: yarn version
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: version --no-git-tag-version --prerelease --preid $(git rev-parse --short HEAD)
+      - run: yarn build
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Commit
+        run: |-
+          git config user.name "Automated"
+          git config user.email "actions@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(version): update package.json version"
+          git push
