@@ -1,56 +1,14 @@
-import { currentComponent, withDomTypeIdentifier } from "./preact_integration";
+import { currentComponent } from "./preact_integration";
 
 import { castDraft, enableMapSet, Immutable, produce } from "immer";
 import { Component } from "preact";
 import { areEquivalent } from "./areEquivalent";
+import { AppState, EffectHandlerFn, EffectHandlerIdentifier, Identifier, InternalSubscriptionValue, SideEffect, SideEffectFn, SideEffectIdentifier, Subscriber, SubscriberFn, SubscriberIdentifier, SubscriptionValue } from "./types";
 
 enableMapSet();
 
-export type AppState = Immutable<Map<string | symbol, any>>;
-export type Identifier = symbol;
-export type SubscriberIdentifier = Identifier;
-export type SideEffectIdentifier = Identifier;
-export type EffectHandlerIdentifier = Identifier;
-export interface SubscriptionValue<T> {
-  readonly value: T;
-}
-export type Subscription<T> = {
-  readonly value: SubscriptionValue<T>;
-}
-
-/**
- * Specific to preact
- */
-interface InternalSubscriptionValue<T> extends SubscriptionValue<T> {
-  readonly type: null;
-  readonly __b: number;
-  readonly constructor: undefined;
-  readonly __type: typeof withDomTypeIdentifier;
-}
-
-type SubscriberFn<T, R> = (stateOrDeps: T, ...args: any[]) => R;
-type Subscriber<T, R> = {
-  readonly id: Identifier;
-  readonly dependsOn: SubscriberIdentifier[];
-  readonly fn: SubscriberFn<T, R>;
-  readonly value: any;
-  readonly isOutdated: boolean;
-  readonly components: Set<Component>;
-};
-
-type SideEffectFn = (...args: any[]) => void;
-type SideEffect = {
-  readonly id: Identifier;
-  readonly fn: SideEffectFn;
-};
-
-export type EffectHandlerResponse = {
-  readonly [key: Identifier]: any;
-};
-export type EffectHandlerFn = (appState: AppState, ...args: any[]) => EffectHandlerResponse;
-
 let appState: AppState = new Map();
-let subscribers: Immutable<Map<SubscriberIdentifier, Subscriber<any, any>>> = new Map();
+let subscribers: Immutable<Map<SubscriberIdentifier, Subscriber<unknown, unknown>>> = new Map();
 let sideEffects: Immutable<Map<SideEffectIdentifier, SideEffect>> = new Map();
 let effectHandlers: Immutable<Map<EffectHandlerIdentifier, EffectHandlerFn>> = new Map();
 let subscriberToComponents: Immutable<Map<Identifier, Component[]>> = new Map();
@@ -70,7 +28,7 @@ function registerSubscriber<T, R>(
 ): SubscriberIdentifier {
   const id = Symbol("with-dom-subscriber");
 
-  const realFn = (fn || depsOrFn) as SubscriberFn<T, R>;
+  const realFn = (fn || depsOrFn) as SubscriberFn<unknown, unknown>;
   const deps = (fn ? depsOrFn : []) as SubscriberIdentifier[];
 
   subscribers = produce(subscribers, (subscribers) => {
@@ -101,16 +59,16 @@ function registerSideEffect(fn: SideEffectFn): SideEffectIdentifier {
 }
 
 function getSubscriberDirectChildren(
-  subscriber: Immutable<Subscriber<any, any>>
-): Immutable<Subscriber<any, any>[]> {
+  subscriber: Immutable<Subscriber<unknown, unknown>>
+): Immutable<Subscriber<unknown, unknown>[]> {
   return [
     ...subscribers.values(),
   ].filter(s => s.dependsOn.includes(subscriber.id));
 }
 
 function getAllSubscribersChildren(
-  subscribers: Immutable<Subscriber<any, any>[]>
-): Immutable<Subscriber<any, any>[]> {
+  subscribers: Immutable<Subscriber<unknown, unknown>[]>
+): Immutable<Subscriber<unknown, unknown>[]> {
   return subscribers.reduce((acc, subscriber) => {
 
     // TODO: Verify stack overflow
@@ -122,13 +80,13 @@ function getAllSubscribersChildren(
       const allChildren = getAllSubscribersChildren(directChildren);
       acc.push(...castDraft(allChildren));
     });
-  }, [] as Immutable<Array<Subscriber<any, any>>>);
+  }, [] as Immutable<Subscriber<unknown, unknown>[]>);
 }
 
 const updateAppState = registerSideEffect((newState: AppState) => {
   if (appState === newState) {
     console.error(
-      "\"updateAppState\" has been called without any modification.\n" +
+      "\"updateAppState\" has been called without unknown modification.\n" +
       "This is a bad smell and could lead to potential performance issues."
     );
   }
@@ -136,7 +94,7 @@ const updateAppState = registerSideEffect((newState: AppState) => {
 
   const rootSubs = [...subscribers.values()].filter(s => s.dependsOn.length === 0);
 
-  let outdatedSubs: Immutable<Subscriber<any, any>[]> = [];
+  let outdatedSubs: Immutable<Subscriber<unknown, unknown>[]> = [];
 
   /**
    * Every time the appState is updated, we compute all of the subscribers
@@ -156,7 +114,7 @@ const updateAppState = registerSideEffect((newState: AppState) => {
       rootSub.components.forEach(c => c.setState({}));
 
       if (subscriberToComponents.has(rootSub.id)) {
-        subscriberToComponents.get(rootSub.id)!.forEach(c => c.setState({}));
+        subscriberToComponents.get(rootSub.id)?.forEach(c => c.setState({}));
       }
     }
 
@@ -182,7 +140,7 @@ const updateAppState = registerSideEffect((newState: AppState) => {
       outdatedSub.components.forEach(c => c.setState({}));
 
       if (subscriberToComponents.has(outdatedSub.id)) {
-        subscriberToComponents.get(outdatedSub.id)!.forEach(c => c.setState({}));
+        subscriberToComponents.get(outdatedSub.id)?.forEach(c => c.setState({}));
       }
 
       subscribers.set(outdatedSub.id, castDraft({
@@ -208,7 +166,7 @@ function registerEffectHandler(fn: EffectHandlerFn): EffectHandlerIdentifier {
 
 // TODO: How to make it work with type validation?
 // TODO: Make it work with async side effects
-function executeSideEffect(id: SideEffectIdentifier, ...args: any[]): void {
+function executeSideEffect(id: SideEffectIdentifier, ...args: unknown[]): void {
   const sideEffect = sideEffects.get(id);
 
   if (!sideEffect) {
@@ -219,7 +177,7 @@ function executeSideEffect(id: SideEffectIdentifier, ...args: any[]): void {
 }
 
 // TODO: How to make it work with type validation?
-function dispatchEvent(id: EffectHandlerIdentifier, ...args: any[]): void {
+function dispatchEvent(id: EffectHandlerIdentifier, ...args: unknown[]): void {
   // TODO: should probably be added to a stack to be ensure that each event 
   //       is processed only when the previous one is completely finished
   //       i.e. make sure that the rendering happened too
@@ -242,8 +200,8 @@ function dispatchEvent(id: EffectHandlerIdentifier, ...args: any[]): void {
  * The order of the output matters: from the root of the tree to the leaves
  */
 function getAllDependencies(
-  subs: Immutable<Subscriber<any, any>[]>
-): Immutable<Subscriber<any, any>[]> {
+  subs: Immutable<Subscriber<unknown, unknown>[]>
+): Immutable<Subscriber<unknown, unknown>[]> {
   return subs.reduce((acc, el) => {
     const parents = el.dependsOn.map(s => {
       const parent = subscribers.get(s);
@@ -259,7 +217,7 @@ function getAllDependencies(
       acc.push(...castDraft(parents));
       acc.push(...castDraft(getAllDependencies(parents)));
     });
-  }, [] as Immutable<Subscriber<any, any>[]>);
+  }, [] as Immutable<Subscriber<unknown, unknown>[]>);
 
 
   // TODO: Put back this, but working:
@@ -274,8 +232,8 @@ function getAllDependencies(
 }
 
 function computeAllDependenciesValues(
-  subscriber: Immutable<Subscriber<any, any>>,
-  ...args: any[]
+  subscriber: Immutable<Subscriber<unknown, unknown>>,
+  ...args: unknown[]
 ): typeof subscribers {
   const allParents = getAllDependencies([subscriber]);
 
@@ -305,7 +263,7 @@ function computeAllDependenciesValues(
   });
 }
 
-function computeSubscriberValue(subscriber: Immutable<Subscriber<any, any>>, ...args: any[]): any {
+function computeSubscriberValue(subscriber: Immutable<Subscriber<unknown, unknown>>, ...args: unknown[]): unknown {
   const updatedDeps = computeAllDependenciesValues(subscriber); // TODO: args
 
   const directDeps = subscriber.dependsOn.map(id => updatedDeps.get(id));
@@ -336,38 +294,40 @@ function formatSubscriptionValue<T>(value: T): InternalSubscriptionValue<T> {
     type: null,
     __b: 0,
     constructor: undefined,
-    __type: withDomTypeIdentifier,
+    __type: "with-dom_subscription",
     value: value,
   };
 }
 
 function subscribe<T>(
   subscriberId: SubscriberIdentifier,
-  ...args: any[]
-): Immutable<Subscription<T>> {
+  ...args: unknown[]
+): SubscriptionValue<T> {
   const sub = subscribers.get(subscriberId);
 
   if (!sub) {
     throw Error("Could not find the related Subscriber");
   }
 
-  if (currentComponent) {
-    // TODO: Is erased
+  if (currentComponent !== undefined) {
 
-    subscribers = produce(subscribers, (subscribers) => {
-      subscribers.set(subscriberId, {
-        ...castDraft(sub),
-        components: castDraft(
-          produce(sub.components, (components) => {
-            components.add(castDraft(currentComponent!));
-          })
-        ),
-      });
-    })
+    // TODO: Does not work, but the code would be cleaner with this
+    //subscribers = produce(subscribers, (subscribers) => {
+    //  subscribers.set(subscriberId, {
+    //    ...castDraft(sub),
+    //    components: castDraft(
+    //      produce(sub.components, (components) => {
+    //        components.add(castDraft(currentComponent));
+    //      })
+    //    ),
+    //  });
+    //})
+
+    const draftComponent = castDraft(currentComponent);
 
     subscriberToComponents = produce(subscriberToComponents, (subscriberToComponents) => {
       const prev = subscriberToComponents.get(subscriberId) ?? [];
-      prev.push(castDraft(currentComponent!));
+      prev.push(draftComponent);
       subscriberToComponents.set(subscriberId, prev);
     });
   } else {
@@ -377,10 +337,10 @@ function subscribe<T>(
 
   if (sub.isOutdated) {
     const value = computeSubscriberValue(sub, ...args);
-    return formatSubscriptionValue(value);
+    return formatSubscriptionValue<T>(value as T);
   }
 
-  return formatSubscriptionValue(sub.value);
+  return formatSubscriptionValue<T>(sub.value as T);
 }
 
 export {
