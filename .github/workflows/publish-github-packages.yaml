@@ -22,9 +22,7 @@ jobs:
         with:
           cmd: install
       - name: yarn version
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: version --no-git-tag-version --prerelease --preid $(git rev-parse --short HEAD)
+        run: yarn version --no-git-tag-version --prerelease --preid $(git rev-parse --short HEAD)
       - run: yarn build
       - run: npm publish
         env:
