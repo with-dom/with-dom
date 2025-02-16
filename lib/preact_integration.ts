@@ -47,6 +47,7 @@ function hook<T extends OptionsTypes>(hookName: T, hookFn: HookFn<T>) {
   // @ts-expect-error private options hooks usage
   options[hookName] = hookFn.bind(
     null,
+    // @ts-expect-error private options hooks usage
     options[hookName] ||
       (() => {
         // do nothing.

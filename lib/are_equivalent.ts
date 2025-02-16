@@ -81,7 +81,7 @@ function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
   // since value1 being un-circular means value2 will either be equal (and not
   // circular too) or unequal whether circular or not.
   if (stack.includes(value1)) {
-    throw new Error(`areEquivalent value1 is circular`);
+    return false;
   }
 
   // breadcrumb
@@ -167,25 +167,22 @@ function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
   keys1.sort();
   keys2.sort();
 
-  // Ensure perfect match across all keys
   for (let i = 0; i < numKeys; i++) {
-    if (keys1[i] !== keys2[i]) {
+    if (!_areEquivalent(keys1[i], keys2[i], stack)) {
       return false;
     }
   }
 
   // Ensure perfect match across all values
   for (let i = 0; i < numKeys; i++) {
-    const currentKey = keys1[i];
-
     let keyValue1: unknown, keyValue2: unknown;
 
     if (areValuesMaps) {
-      keyValue1 = (value1 as Map<unknown, unknown>).get(currentKey);
-      keyValue2 = (value2 as Map<unknown, unknown>).get(currentKey);
+      keyValue1 = (value1 as Map<unknown, unknown>).get(keys1[i]);
+      keyValue2 = (value2 as Map<unknown, unknown>).get(keys2[i]);
     } else {
-      keyValue1 = (value1 as Record<string, unknown>)[currentKey];
-      keyValue2 = (value2 as Record<string, unknown>)[currentKey];
+      keyValue1 = (value1 as Record<string, unknown>)[keys1[i]];
+      keyValue2 = (value2 as Record<string, unknown>)[keys2[i]];
     }
 
     if (!_areEquivalent(keyValue1, keyValue2, stack)) {
