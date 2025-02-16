@@ -1,5 +1,10 @@
 import { assert, beforeEach, expect, suite, test, vi } from "vitest";
-import { getSubscriber, getSubscriberDirectChildren, registerSubscriber, subscribe } from "../lib/subscribers";
+import {
+  getSubscriber,
+  getSubscriberDirectChildren,
+  registerSubscriber,
+  subscribe,
+} from "../lib/subscribers";
 import { AppState } from "../lib/types";
 import { initialize } from "../lib";
 import { libraryState } from "../lib/library_state";
@@ -59,12 +64,18 @@ suite("registerSubscriber", () => {
     const childSubFn1 = ([v, s]: [number, string]) => {
       return v + s;
     };
-    const childSubId1 = registerSubscriber([rootSubId1, rootSubId2], childSubFn1);
+    const childSubId1 = registerSubscriber(
+      [rootSubId1, rootSubId2],
+      childSubFn1,
+    );
 
     const childSubFn2 = ([s1, s2]: [string, string]) => {
       return s1 + s2;
     };
-    const childSubId2 = registerSubscriber([childSubId1, rootSubId2], childSubFn2);
+    const childSubId2 = registerSubscriber(
+      [childSubId1, rootSubId2],
+      childSubFn2,
+    );
 
     const rootSub1 = getSubscriber(rootSubId1)!;
     const rootSub2 = getSubscriber(rootSubId2)!;
@@ -109,11 +120,10 @@ suite("registerSubscriber", () => {
   });
 });
 
-
 suite("getSubscriberDirectChildren", () => {
   test("work correctly with root subscriber without children", () => {
     // Register some other root subs
-    [1, 2, 3].forEach(() => registerSubscriber(() => { }));
+    [1, 2, 3].forEach(() => registerSubscriber(() => {}));
 
     const subFn = (_state: AppState) => 42;
     const subId = registerSubscriber(subFn);
@@ -133,17 +143,26 @@ suite("getSubscriberDirectChildren", () => {
     const childSubFn1 = ([v, s]: [number, string]) => {
       return v + s;
     };
-    const childSubId1 = registerSubscriber([rootSubId1, rootSubId2], childSubFn1);
+    const childSubId1 = registerSubscriber(
+      [rootSubId1, rootSubId2],
+      childSubFn1,
+    );
 
     const childSubFn2 = ([s1, s2]: [string, string]) => {
       return s1 + s2;
     };
-    const childSubId2 = registerSubscriber([childSubId1, rootSubId2], childSubFn2);
+    const childSubId2 = registerSubscriber(
+      [childSubId1, rootSubId2],
+      childSubFn2,
+    );
 
     const childSubFn3 = (_) => {
       return null;
     };
-    const childSubId3 = registerSubscriber([childSubId1, childSubId2], childSubFn3);
+    const childSubId3 = registerSubscriber(
+      [childSubId1, childSubId2],
+      childSubFn3,
+    );
 
     const rootSub2 = getSubscriber(rootSubId2)!;
 

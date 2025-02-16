@@ -20,7 +20,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "lint": "eslint --fix && prettier . --write"
+    "lint": "prettier . --write && eslint"
   },
   "peerDependencies": {
     "preact": "10.x"

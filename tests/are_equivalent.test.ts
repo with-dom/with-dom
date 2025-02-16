@@ -10,12 +10,15 @@ suite("areEquivalent", () => {
       ["a", "a"],
       [true, true],
       [3e2, 300],
-      ['x', 'x'],
+      ["x", "x"],
       [undefined, undefined],
       [null, null],
       [0n, 0n],
       [0, -0],
-      [BigInt(Number.MAX_SAFE_INTEGER) + 1n, BigInt(Number.MAX_SAFE_INTEGER) + 1n],
+      [
+        BigInt(Number.MAX_SAFE_INTEGER) + 1n,
+        BigInt(Number.MAX_SAFE_INTEGER) + 1n,
+      ],
       [NaN, NaN],
       [Infinity, Infinity],
       [globalSymbol, globalSymbol],
@@ -23,11 +26,9 @@ suite("areEquivalent", () => {
       expect(areEquivalent(a, b)).toBeTruthy();
     });
 
-    test.each([
-    ])("%s and %s (different type) are equivalent", (a, b) => {
+    test.each([])("%s and %s (different type) are equivalent", (a, b) => {
       expect(areEquivalent(a, b)).toBeTruthy();
     });
-
 
     test.each([
       [Symbol(), Symbol()],
@@ -61,22 +62,28 @@ suite("areEquivalent", () => {
       expect(areEquivalent(date, date)).toBeTruthy();
 
       expect(
-        areEquivalent(new Date("2025-01-01"), new Date("2025-01-01"))
+        areEquivalent(new Date("2025-01-01"), new Date("2025-01-01")),
       ).toBeTruthy();
 
       expect(
-        areEquivalent(new Date("2025-01-01T10:00+00:00"), new Date("2025-01-01T09:00-01:00"))
+        areEquivalent(
+          new Date("2025-01-01T10:00+00:00"),
+          new Date("2025-01-01T09:00-01:00"),
+        ),
       ).toBeTruthy();
 
       expect(
-        areEquivalent(new Date("invalid"), new Date("invalid2"))
+        areEquivalent(new Date("invalid"), new Date("invalid2")),
       ).toBeTruthy();
     });
 
     test("different dates are not equivalent", () => {
       expect(areEquivalent(new Date(), "not-a-date"));
       expect(
-        areEquivalent(new Date("2025-01-01T02:00"), new Date("2025-01-01T02:01"))
+        areEquivalent(
+          new Date("2025-01-01T02:00"),
+          new Date("2025-01-01T02:01"),
+        ),
       ).toBeFalsy();
     });
   });
@@ -94,9 +101,15 @@ suite("areEquivalent", () => {
 
     test.each([
       [[], []],
-      [[1, 2], [1, 2]],
+      [
+        [1, 2],
+        [1, 2],
+      ],
       [[[[]]], [[[]]]],
-      [[true, null], [true, null]],
+      [
+        [true, null],
+        [true, null],
+      ],
     ])("%s and %s are equivalent", (a, b) => {
       expect(areEquivalent(a, b)).toBeTruthy();
     });
@@ -104,7 +117,10 @@ suite("areEquivalent", () => {
     test.each([
       [[], [1]],
       [[[[]]], [[[[]]]]],
-      [[1, 2], [2, 1]],
+      [
+        [1, 2],
+        [2, 1],
+      ],
       [[, ,], new Array(3)],
       [[], "not-an-array"],
     ])("%s and %s are not equivalent", (a, b) => {
@@ -140,9 +156,13 @@ suite("areEquivalent", () => {
         }
       }
 
-      expect(areEquivalent(new Rectangle(10, 11), new Rectangle(10, 11))).toBeTruthy();
+      expect(
+        areEquivalent(new Rectangle(10, 11), new Rectangle(10, 11)),
+      ).toBeTruthy();
 
-      expect(areEquivalent({ "height": 10, "width": 11}, new Rectangle(10, 11))).toBeTruthy();
+      expect(
+        areEquivalent({ height: 10, width: 11 }, new Rectangle(10, 11)),
+      ).toBeTruthy();
     });
 
     test("which are not equivalent", () => {
@@ -155,28 +175,32 @@ suite("areEquivalent", () => {
         }
       }
 
-      expect(areEquivalent(new Rectangle(10, 11), new Rectangle(100, 200))).toBeFalsy();
-      expect(areEquivalent({ "height": 20, "width": 11}, new Rectangle(10, 11))).toBeFalsy();
+      expect(
+        areEquivalent(new Rectangle(10, 11), new Rectangle(100, 200)),
+      ).toBeFalsy();
+      expect(
+        areEquivalent({ height: 20, width: 11 }, new Rectangle(10, 11)),
+      ).toBeFalsy();
     });
 
     test.each([
       [{}, {}],
-      [{ "a": 1 }, { "a": 1 }],
-      [{ "a": { "a": 1 } }, { "a": { "a": 1 } }]
+      [{ a: 1 }, { a: 1 }],
+      [{ a: { a: 1 } }, { a: { a: 1 } }],
     ])("%s and %s are equivalent", (a, b) => {
       expect(areEquivalent(a, b)).toBeTruthy();
     });
 
     test.each([
-      [{ "a": 1 }, { "a": 2 }],
-      [{}, { "a": 1 }],
+      [{ a: 1 }, { a: 2 }],
+      [{}, { a: 1 }],
     ])("%s and %s are not equivalent", (a, b) => {
       expect(areEquivalent(a, b)).toBeFalsy();
     });
 
     test("handles circular dependencies", () => {
       const objA: Record<string, unknown> = {};
-      const objB = { "a": objA };
+      const objB = { a: objA };
 
       objA["a"] = objB;
 
@@ -186,11 +210,11 @@ suite("areEquivalent", () => {
 
   suite("Functions", () => {
     test("same instances are equivalent", () => {
-      const fn = () => { };
+      const fn = () => {};
 
       expect(areEquivalent(fn, fn)).toBeTruthy();
 
-      function testFn() { }
+      function testFn() {}
 
       expect(areEquivalent(testFn, testFn)).toBeTruthy();
 
@@ -203,7 +227,7 @@ suite("areEquivalent", () => {
       const that = {};
 
       expect(
-        areEquivalent(nonEmptyFn.bind(that), nonEmptyFn.bind(that))
+        areEquivalent(nonEmptyFn.bind(that), nonEmptyFn.bind(that)),
       ).toBeTruthy();
     });
 
@@ -233,33 +257,37 @@ suite("areEquivalent", () => {
     });
 
     test("different instances which are not equivalent", () => {
-      const fnA = () => { };
-      function fnB() { }
+      const fnA = () => {};
+      function fnB() {}
 
       expect(areEquivalent(fnA, fnB)).toBeFalsy();
 
       function fnC() {
         return "it's the same, I promise!";
-      };
+      }
 
       function fnD() {
         return "it's the same, I promise!";
-      };
+      }
 
       expect(areEquivalent(fnC, fnD), "because of their names").toBeFalsy();
 
-      const fnE = (_a: any) => { };
-      const fnF = (_b: any) => { };
+      const fnE = (_a: any) => {};
+      const fnF = (_b: any) => {};
 
       expect(areEquivalent(fnE, fnF)).toBeFalsy();
 
-      const fnG = () => { return; };
-      const fnH = () => { };
+      const fnG = () => {
+        return;
+      };
+      const fnH = () => {};
 
       expect(areEquivalent(fnG, fnH)).toBeFalsy();
 
       const fnI = () => 1;
-      const fnJ = () => { return 1; };
+      const fnJ = () => {
+        return 1;
+      };
 
       expect(areEquivalent(fnI, fnJ)).toBeFalsy();
     });
@@ -282,23 +310,23 @@ suite("areEquivalent", () => {
 
       expect(areEquivalent(mapA, mapB)).toBeTruthy();
 
-      [mapA, mapB].forEach(m => m.set("key", "value"));
+      [mapA, mapB].forEach((m) => m.set("key", "value"));
 
       expect(areEquivalent(mapA, mapB)).toBeTruthy();
 
-      [mapA, mapB].forEach(m => m.set(null, true));
+      [mapA, mapB].forEach((m) => m.set(null, true));
 
       expect(areEquivalent(mapA, mapB)).toBeTruthy();
 
-      [mapA, mapB].forEach(m => m.delete(null));
+      [mapA, mapB].forEach((m) => m.delete(null));
 
       expect(areEquivalent(mapA, mapB)).toBeTruthy();
 
-      [mapA, mapB].forEach(m => m.clear());
+      [mapA, mapB].forEach((m) => m.clear());
 
       expect(areEquivalent(mapA, mapB)).toBeTruthy();
 
-      [mapA, mapB].forEach(m => m.set({}, () => { }));
+      [mapA, mapB].forEach((m) => m.set({}, () => {}));
 
       expect(areEquivalent(mapA, mapB)).toBeTruthy();
     });
@@ -312,7 +340,7 @@ suite("areEquivalent", () => {
       expect(areEquivalent(mapA, mapB)).toBeFalsy();
 
       mapA.clear();
-      [mapA, mapB].forEach(m => {
+      [mapA, mapB].forEach((m) => {
         m.set(null, true);
         m.set("1", 3);
         m.set(false, undefined);
@@ -322,7 +350,7 @@ suite("areEquivalent", () => {
       expect(areEquivalent(mapA, mapB), "different values").toBeFalsy();
 
       mapA.clear();
-      [mapA, mapB].forEach(m => {
+      [mapA, mapB].forEach((m) => {
         m.set(null, true);
         m.set("1", 3);
         m.set(false, undefined);
@@ -332,7 +360,7 @@ suite("areEquivalent", () => {
       expect(areEquivalent(mapA, mapB), "different keys").toBeFalsy();
 
       mapA.clear();
-      [mapA, mapB].forEach(m => {
+      [mapA, mapB].forEach((m) => {
         m.set(null, true);
         m.set("1", 3);
         m.set(false, undefined);
@@ -363,11 +391,11 @@ suite("areEquivalent", () => {
 
       expect(areEquivalent(setA, setB)).toBeTruthy();
 
-      [setA, setB].forEach(s => s.add(1));
+      [setA, setB].forEach((s) => s.add(1));
 
       expect(areEquivalent(setA, setB)).toBeTruthy();
 
-      [setA, setB].forEach(s => s.add(undefined));
+      [setA, setB].forEach((s) => s.add(undefined));
 
       expect(areEquivalent(setA, setB)).toBeTruthy();
     });
@@ -381,7 +409,7 @@ suite("areEquivalent", () => {
       expect(areEquivalent(setA, setB)).toBeFalsy();
 
       setA.clear();
-      [setA, setB].forEach(s => {
+      [setA, setB].forEach((s) => {
         s.add(null);
         s.add("1");
         s.add(false);
@@ -391,7 +419,7 @@ suite("areEquivalent", () => {
       expect(areEquivalent(setA, setB)).toBeFalsy();
 
       setA.clear();
-      [setA, setB].forEach(s => {
+      [setA, setB].forEach((s) => {
         s.add(null);
         s.add("1");
         s.add(false);

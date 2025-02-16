@@ -6,16 +6,19 @@ import { libraryState } from "./library_state";
 function registerFxHandler(fn: EffectHandlerFn): EffectHandlerIdentifier {
   const id = Symbol("with-dom-effect-handler");
 
-  libraryState.effectHandlers = produce(libraryState.effectHandlers, (effectHandlers) => {
-    effectHandlers.set(id, fn);
-  });
+  libraryState.effectHandlers = produce(
+    libraryState.effectHandlers,
+    (effectHandlers) => {
+      effectHandlers.set(id, fn);
+    },
+  );
 
   return id;
 }
 
 // TODO: How to make it work with type validation?
 function dispatch(id: EffectHandlerIdentifier, ...args: unknown[]): void {
-  // TODO: should probably be added to a stack to be ensure that each event 
+  // TODO: should probably be added to a stack to be ensure that each event
   //       is processed only when the previous one is completely finished
   //       i.e. make sure that the rendering happened too
 
@@ -34,7 +37,4 @@ function dispatch(id: EffectHandlerIdentifier, ...args: unknown[]): void {
   });
 }
 
-export {
-  dispatch,
-  registerFxHandler,
-};
+export { dispatch, registerFxHandler };

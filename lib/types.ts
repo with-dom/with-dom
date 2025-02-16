@@ -34,13 +34,19 @@ export interface WithDomConfiguration {
   readonly appState?: AppState;
   readonly effectHandlers?: Map<EffectHandlerIdentifier, EffectHandlerFn>;
   readonly effects?: Map<SideEffectIdentifier, SideEffectFn>;
-  readonly subscribers?: Map<SubscriberIdentifier, Subscriber<unknown, unknown>>;
+  readonly subscribers?: Map<
+    SubscriberIdentifier,
+    Subscriber<unknown, unknown>
+  >;
 }
 
 type AppState = ReadonlyMap<string | symbol, unknown>;
 type EffectHandlers = ReadonlyMap<EffectHandlerIdentifier, EffectHandlerFn>;
 type Effects = ReadonlyMap<SideEffectIdentifier, SideEffectFn>;
-type Subscribers = ReadonlyMap<SubscriberIdentifier, Subscriber<unknown, unknown>>;
+type Subscribers = ReadonlyMap<
+  SubscriberIdentifier,
+  Subscriber<unknown, unknown>
+>;
 export interface LibraryState {
   appState: AppState;
   effectHandlers: EffectHandlers;

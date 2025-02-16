@@ -30,8 +30,4 @@ function executeFx(id: SideEffectIdentifier, ...args: unknown[]): void {
   sideEffectFn(...args);
 }
 
-export {
-  executeFx,
-  registerCoreFx,
-  registerFx,
-};
+export { executeFx, registerCoreFx, registerFx };

@@ -1,6 +1,12 @@
 import { beforeEach, expect, suite, test, vi } from "vitest";
 
-import { dispatch, initialize, registerFxHandler, registerSubscriber, updateAppState } from "../../lib";
+import {
+  dispatch,
+  initialize,
+  registerFxHandler,
+  registerSubscriber,
+  updateAppState,
+} from "../../lib";
 import { areEquivalent } from "../../lib/are_equivalent";
 import { getSubscriber, subscribe } from "../../lib/subscribers";
 import { produce } from "immer";
@@ -8,7 +14,7 @@ import { libraryState } from "../../lib/library_state";
 
 beforeEach(() => {
   initialize({});
-})
+});
 
 test("updateAppState updates the appState", () => {
   const initialState = new Map([["only-in-the-first-map", true]]);
@@ -29,16 +35,34 @@ test("updateAppState updates the appState", () => {
 
 suite("unchanged state", () => {
   test("updateAppState computes only (but all) the root subscribers", () => {
-    const rootSub1 = registerSubscriber<number | undefined>(state => state.get("age") as number);
-    const rootSub2 = registerSubscriber<string | undefined>(state => state.get("username") as string)
+    const rootSub1 = registerSubscriber<number | undefined>(
+      (state) => state.get("age") as number,
+    );
+    const rootSub2 = registerSubscriber<string | undefined>(
+      (state) => state.get("username") as string,
+    );
 
-    const childSub1 = registerSubscriber<[number | undefined], number | undefined>([rootSub1], ([age]) => age ? age * age : undefined);
-    const childSub2 = registerSubscriber<[string | undefined], number | undefined>([rootSub2], ([username]) => username ? username.length : undefined);
-    const childSub3 = registerSubscriber<[number | undefined, number | undefined], [number, number]>([childSub1, childSub2], ([squaredAge, usernameLength]) => {
+    const childSub1 = registerSubscriber<
+      [number | undefined],
+      number | undefined
+    >([rootSub1], ([age]) => (age ? age * age : undefined));
+    const childSub2 = registerSubscriber<
+      [string | undefined],
+      number | undefined
+    >([rootSub2], ([username]) => (username ? username.length : undefined));
+    const childSub3 = registerSubscriber<
+      [number | undefined, number | undefined],
+      [number, number]
+    >([childSub1, childSub2], ([squaredAge, usernameLength]) => {
       return [squaredAge ?? -1, usernameLength ?? -1];
     });
 
-    const spies = new Map([...libraryState.subscribers.values()].map(s => [s.id, vi.spyOn(s, "fn")]));
+    const spies = new Map(
+      [...libraryState.subscribers.values()].map((s) => [
+        s.id,
+        vi.spyOn(s, "fn"),
+      ]),
+    );
 
     const rootSubIdentifiers = [rootSub1, rootSub2];
     const depsSubIdentifiers = [childSub1, childSub2, childSub3];
@@ -47,15 +71,15 @@ suite("unchanged state", () => {
     // We subscribe to each to make sure the latest value is computed
     allSubsIdentifiers.forEach(subscribe);
 
-    rootSubIdentifiers.forEach(rs => {
+    rootSubIdentifiers.forEach((rs) => {
       expect(spies.get(rs)).toHaveBeenCalledTimes(1);
     });
 
-    depsSubIdentifiers.forEach(ds => {
+    depsSubIdentifiers.forEach((ds) => {
       expect(spies.get(ds)).toHaveBeenCalledTimes(1);
     });
 
-    allSubsIdentifiers.map(getSubscriber).forEach(sub => {
+    allSubsIdentifiers.map(getSubscriber).forEach((sub) => {
       expect(sub?.isOutdated).toBeFalsy();
     });
 
@@ -67,7 +91,7 @@ suite("unchanged state", () => {
 
     dispatch(fxHandler);
 
-    rootSubIdentifiers.forEach(rs => {
+    rootSubIdentifiers.forEach((rs) => {
       expect(spies.get(rs)).toHaveBeenCalledTimes(2);
 
       const sub = getSubscriber(rs);
@@ -75,7 +99,7 @@ suite("unchanged state", () => {
       expect(sub?.isOutdated).toBeFalsy();
     });
 
-    depsSubIdentifiers.forEach(ds => {
+    depsSubIdentifiers.forEach((ds) => {
       expect(spies.get(ds)).toHaveBeenCalledTimes(1);
 
       const sub = getSubscriber(ds);
@@ -85,12 +109,25 @@ suite("unchanged state", () => {
   });
 
   test("updateAppState does not set children as outdated", () => {
-    const rootSub1 = registerSubscriber<number | undefined>(state => state.get("age") as number);
-    const rootSub2 = registerSubscriber<string | undefined>(state => state.get("username") as string)
+    const rootSub1 = registerSubscriber<number | undefined>(
+      (state) => state.get("age") as number,
+    );
+    const rootSub2 = registerSubscriber<string | undefined>(
+      (state) => state.get("username") as string,
+    );
 
-    const childSub1 = registerSubscriber<[number | undefined], number | undefined>([rootSub1], ([age]) => age ? age * age : undefined);
-    const childSub2 = registerSubscriber<[string | undefined], number | undefined>([rootSub2], ([username]) => username ? username.length : undefined);
-    const childSub3 = registerSubscriber<[number | undefined, number | undefined], [number, number]>([childSub1, childSub2], ([squaredAge, usernameLength]) => {
+    const childSub1 = registerSubscriber<
+      [number | undefined],
+      number | undefined
+    >([rootSub1], ([age]) => (age ? age * age : undefined));
+    const childSub2 = registerSubscriber<
+      [string | undefined],
+      number | undefined
+    >([rootSub2], ([username]) => (username ? username.length : undefined));
+    const childSub3 = registerSubscriber<
+      [number | undefined, number | undefined],
+      [number, number]
+    >([childSub1, childSub2], ([squaredAge, usernameLength]) => {
       return [squaredAge ?? -1, usernameLength ?? -1];
     });
 
@@ -117,16 +154,34 @@ suite("unchanged state", () => {
 
 suite("changed state", () => {
   test("updateAppState computes only (but all) the root subscribers", () => {
-    const rootSub1 = registerSubscriber<number | undefined>(state => state.get("age") as number);
-    const rootSub2 = registerSubscriber<string | undefined>(state => state.get("username") as string)
+    const rootSub1 = registerSubscriber<number | undefined>(
+      (state) => state.get("age") as number,
+    );
+    const rootSub2 = registerSubscriber<string | undefined>(
+      (state) => state.get("username") as string,
+    );
 
-    const childSub1 = registerSubscriber<[number | undefined], number | undefined>([rootSub1], ([age]) => age ? age * age : undefined);
-    const childSub2 = registerSubscriber<[string | undefined], number | undefined>([rootSub2], ([username]) => username ? username.length : undefined);
-    const childSub3 = registerSubscriber<[number | undefined, number | undefined], [number, number]>([childSub1, childSub2], ([squaredAge, usernameLength]) => {
+    const childSub1 = registerSubscriber<
+      [number | undefined],
+      number | undefined
+    >([rootSub1], ([age]) => (age ? age * age : undefined));
+    const childSub2 = registerSubscriber<
+      [string | undefined],
+      number | undefined
+    >([rootSub2], ([username]) => (username ? username.length : undefined));
+    const childSub3 = registerSubscriber<
+      [number | undefined, number | undefined],
+      [number, number]
+    >([childSub1, childSub2], ([squaredAge, usernameLength]) => {
       return [squaredAge ?? -1, usernameLength ?? -1];
     });
 
-    const spies = new Map([...libraryState.subscribers.values()].map(s => [s.id, vi.spyOn(s, "fn")]));
+    const spies = new Map(
+      [...libraryState.subscribers.values()].map((s) => [
+        s.id,
+        vi.spyOn(s, "fn"),
+      ]),
+    );
 
     const rootSubIdentifiers = [rootSub1, rootSub2];
     const depsSubIdentifiers = [childSub1, childSub2, childSub3];
@@ -135,21 +190,21 @@ suite("changed state", () => {
     // We subscribe to each to make sure the latest value is computed
     allSubsIdentifiers.forEach(subscribe);
 
-    rootSubIdentifiers.forEach(rs => {
+    rootSubIdentifiers.forEach((rs) => {
       expect(spies.get(rs)).toHaveBeenCalledTimes(1);
     });
 
-    depsSubIdentifiers.forEach(ds => {
+    depsSubIdentifiers.forEach((ds) => {
       expect(spies.get(ds)).toHaveBeenCalledTimes(1);
     });
 
-    allSubsIdentifiers.map(getSubscriber).forEach(sub => {
+    allSubsIdentifiers.map(getSubscriber).forEach((sub) => {
       expect(sub?.isOutdated).toBeFalsy();
     });
 
     const fxHandler = registerFxHandler((state) => {
       return {
-        [updateAppState]: produce(state, state => {
+        [updateAppState]: produce(state, (state) => {
           state.set("age", 10);
           state.set("username", "techknow");
         }),
@@ -158,7 +213,7 @@ suite("changed state", () => {
 
     dispatch(fxHandler);
 
-    rootSubIdentifiers.forEach(rs => {
+    rootSubIdentifiers.forEach((rs) => {
       expect(spies.get(rs)).toHaveBeenCalledTimes(2);
 
       const sub = getSubscriber(rs);
@@ -166,7 +221,7 @@ suite("changed state", () => {
       expect(sub?.isOutdated).toBeFalsy();
     });
 
-    depsSubIdentifiers.forEach(ds => {
+    depsSubIdentifiers.forEach((ds) => {
       expect(spies.get(ds)).toHaveBeenCalledTimes(1);
 
       const sub = getSubscriber(ds);
@@ -176,12 +231,25 @@ suite("changed state", () => {
   });
 
   test("updateAppState sets children as outdated", () => {
-    const rootSub1 = registerSubscriber<number | undefined>(state => state.get("age") as number);
-    const rootSub2 = registerSubscriber<string | undefined>(state => state.get("username") as string)
+    const rootSub1 = registerSubscriber<number | undefined>(
+      (state) => state.get("age") as number,
+    );
+    const rootSub2 = registerSubscriber<string | undefined>(
+      (state) => state.get("username") as string,
+    );
 
-    const childSub1 = registerSubscriber<[number | undefined], number | undefined>([rootSub1], ([age]) => age ? age * age : undefined);
-    const childSub2 = registerSubscriber<[string | undefined], number | undefined>([rootSub2], ([username]) => username ? username.length : undefined);
-    const childSub3 = registerSubscriber<[number | undefined, number | undefined], [number, number]>([childSub1, childSub2], ([squaredAge, usernameLength]) => {
+    const childSub1 = registerSubscriber<
+      [number | undefined],
+      number | undefined
+    >([rootSub1], ([age]) => (age ? age * age : undefined));
+    const childSub2 = registerSubscriber<
+      [string | undefined],
+      number | undefined
+    >([rootSub2], ([username]) => (username ? username.length : undefined));
+    const childSub3 = registerSubscriber<
+      [number | undefined, number | undefined],
+      [number, number]
+    >([childSub1, childSub2], ([squaredAge, usernameLength]) => {
       return [squaredAge ?? -1, usernameLength ?? -1];
     });
 
@@ -194,7 +262,7 @@ suite("changed state", () => {
 
     const fxHandler = registerFxHandler((state) => {
       return {
-        [updateAppState]: produce(state, state => {
+        [updateAppState]: produce(state, (state) => {
           state.set("username", "techknow");
         }),
       };

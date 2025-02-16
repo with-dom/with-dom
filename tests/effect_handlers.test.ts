@@ -18,11 +18,11 @@ suite("dispatch executes correctly all the fx", () => {
   test("when one fx is defined in the handler", () => {
     const calledWith = new Map();
 
-    const spyFn = vi.fn((_) => { });
+    const spyFn = vi.fn((_) => {});
 
     const fxId = registerFx(spyFn);
 
-    const handlerId = registerFxHandler(_state => {
+    const handlerId = registerFxHandler((_state) => {
       return { [fxId]: calledWith };
     });
 
@@ -35,13 +35,13 @@ suite("dispatch executes correctly all the fx", () => {
     const calledWith1 = new Map();
     const calledWith2 = false;
 
-    const spyFn1 = vi.fn((_) => { });
-    const spyFn2 = vi.fn((_) => { });
+    const spyFn1 = vi.fn((_) => {});
+    const spyFn2 = vi.fn((_) => {});
 
     const fxId1 = registerFx(spyFn1);
     const fxId2 = registerFx(spyFn2);
 
-    const handlerId = registerFxHandler(_state => {
+    const handlerId = registerFxHandler((_state) => {
       return {
         [fxId1]: calledWith1,
         [fxId2]: calledWith2,
