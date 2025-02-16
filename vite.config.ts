@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { resolve } from "path";
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
@@ -14,7 +15,7 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "lib/main.ts"),
+      entry: resolve(__dirname, "lib/index.ts"),
       name: "With-DOM",
       fileName: "with-dom",
     },
@@ -27,4 +28,12 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    fileParallelism: false,
+    setupFiles: "tests/reset_state.ts",
+    coverage: {
+      enabled: true,
+      reporter: ["html"],
+    }
+  }
 });
