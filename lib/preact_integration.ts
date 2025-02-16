@@ -1,17 +1,16 @@
 import { Component, options } from "preact";
-
-const withDomTypeIdentifier = "with-dom_subscription" as const;
+import { InternalSubscriptionValue } from "./types";
 
 /**
  * Holds the reference to the currently rendered component.
  * This allows us to bind a Subscription to a Component and
  * to keep the latter up to date when the Subscription changes.
  */
-let currentComponent: Component<any, any> | undefined;
+let currentComponent: Component<unknown, unknown> | undefined;
 
-interface VNode<P = any> extends preact.VNode<P> {
+interface VNode<P = unknown> extends preact.VNode<P> {
   /** The component instance for this VNode */
-  __c: Component<any, any>;
+  __c: Component<unknown, unknown>;
 }
 
 const enum OptionsTypes {
@@ -31,7 +30,11 @@ interface OptionsType {
   [OptionsTypes.DIFFED](vnode: VNode): void;
 
   [OptionsTypes.RENDER](vnode: VNode): void;
-  [OptionsTypes.CATCH_ERROR](error: any, vnode: VNode, oldVNode: VNode): void;
+  [OptionsTypes.CATCH_ERROR](
+    error: unknown,
+    vnode: VNode,
+    oldVNode: VNode,
+  ): void;
   [OptionsTypes.UNMOUNT](vnode: VNode): void;
 }
 
@@ -40,36 +43,48 @@ type HookFn<T extends keyof OptionsType> = (
   ...a: Parameters<OptionsType[T]>
 ) => ReturnType<OptionsType[T]>;
 
-
 function hook<T extends OptionsTypes>(hookName: T, hookFn: HookFn<T>) {
-  // @ts-ignore-next-line private options hooks usage
-  options[hookName] = hookFn.bind(null, options[hookName] || (() => { }));
+  // @ts-expect-error private options hooks usage
+  options[hookName] = hookFn.bind(
+    null,
+    options[hookName] ||
+      (() => {
+        // do nothing.
+      }),
+  );
 }
 
-function isWithDomSubscription(object: any) {
-  return typeof object === 'object'
-    && object["__type"] === withDomTypeIdentifier;
+function isWithDomSubscription(
+  object: unknown,
+): object is InternalSubscriptionValue<unknown> {
+  if (object == null || typeof object !== "object") {
+    return false;
+  }
+
+  return (
+    (object as InternalSubscriptionValue<unknown>)["__type"] ===
+    "with-dom_subscription"
+  );
 }
 
-function replaceWithDomSubscription(propValue: any) {
-  return isWithDomSubscription(propValue)
-    ? propValue.value + ""
-    : propValue;
+function replaceWithDomSubscription(propValue: unknown) {
+  return isWithDomSubscription(propValue) ? propValue.value + "" : propValue;
 }
 
 hook(OptionsTypes.DIFF, (old, vnode) => {
   // If it is an HTMLElement (e.g. div, span, p, ...)
   if (typeof vnode.type === "string") {
+    const props = vnode.props;
 
-    let props = vnode.props;
+    for (const propName in props) {
+      /* eslint-disable  @typescript-eslint/no-explicit-any */
+      const propValue: unknown = (props as any)[propName];
 
-    for (let propName in props) {
-      const propValue = props[propName];
-
-      if (propName === "children" && Array.isArray(propValue)) {
-        props[propName] = propValue.map(replaceWithDomSubscription);
-      } else {
-        props[propName] = replaceWithDomSubscription(propValue);
+      if (propName === "children" && Array.isArray(props[propName])) {
+        props[propName] = props[propName].map(replaceWithDomSubscription);
+      } else if (isWithDomSubscription(propValue)) {
+        /* eslint-disable  @typescript-eslint/no-explicit-any */
+        (props as any)[propName] = propValue.value + "";
       }
     }
   }
@@ -93,7 +108,4 @@ hook(OptionsTypes.DIFFED, (old, vnode) => {
 
 // TODO: Optimize "componentShouldUpdate" hook
 
-export {
-  currentComponent,
-  withDomTypeIdentifier,
-};
+export { currentComponent };

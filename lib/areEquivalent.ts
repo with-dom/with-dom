@@ -1,4 +1,32 @@
-function _areEquivalent(value1: any, value2: any, stack: any[]) {
+function areSameTypes(v1: unknown, v2: unknown): v2 is typeof v1 {
+  return typeof v1 === typeof v2;
+}
+
+function isNumber(v: unknown): v is number {
+  return typeof v === "number";
+}
+
+function isFunction(v: unknown): v is () => unknown {
+  return typeof v === "function";
+}
+
+function isBigInt(v: unknown): v is bigint {
+  return typeof v === "bigint";
+}
+
+function isBoolean(v: unknown): v is boolean {
+  return typeof v === "boolean";
+}
+
+function isString(v: unknown): v is string {
+  return typeof v === "string";
+}
+
+function isSymbol(v: unknown): v is symbol {
+  return typeof v === "symbol";
+}
+
+function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
   // Numbers, strings, null, undefined, symbols, functions, booleans.
   // Also: objects (incl. arrays) that are actually the same instance
   if (value1 === value2) {
@@ -6,32 +34,31 @@ function _areEquivalent(value1: any, value2: any, stack: any[]) {
     return true;
   }
 
-  const type1 = typeof value1;
-
-  // Ensure types match
-  if (type1 !== typeof value2) {
+  if (!areSameTypes(value1, value2)) {
     return false;
   }
 
   // Special case for number: check for NaN on both sides
   // (only way they can still be equivalent but not equal)
-  if (type1 === 'number') {
+  if (isNumber(value1)) {
     // Failed initial equals test, but could still both be NaN
-    return (isNaN(value1) && isNaN(value2));
+    return isNaN(value1) && isNaN(value2 as number);
   }
 
   // Special case for function: check for toString() equivalence
-  if (type1 === 'function') {
+  if (isFunction(value1)) {
     // Failed initial equals test, but could still have equivalent
     // implementations - note, will match on functions that have same name
     // and are native code: `function abc() { [native code] }`
-    return value1.toString() === value2.toString();
+    return value1.toString() === (value2 as () => unknown).toString();
   }
 
   // For these types, cannot still be equal at this point, so fast-fail
   if (
-    type1 === 'bigint' || type1 === 'boolean' || type1 === 'string' ||
-    type1 === 'symbol'
+    isBigInt(value1) ||
+    isBoolean(value1) ||
+    isString(value1) ||
+    isSymbol(value1)
   ) {
     return false;
   }
@@ -43,7 +70,8 @@ function _areEquivalent(value1: any, value2: any, stack: any[]) {
       return false;
     }
     // Convert to number to compare
-    const asNum1 = +value1, asNum2 = +value2;
+    const asNum1 = +value1,
+      asNum2 = +value2;
     // Check if both invalid (NaN) or are same value
     return asNum1 === asNum2 || (isNaN(asNum1) && isNaN(asNum2));
   }
@@ -105,20 +133,20 @@ function _areEquivalent(value1: any, value2: any, stack: any[]) {
 
   let keys1: string[] = [];
   let keys2: string[] = [];
-  let isMap = false;
+  let areValuesMaps = false;
 
   if (value1 instanceof Map) {
     if (!(value2 instanceof Map)) {
       return false;
     }
 
-    isMap = true;
+    areValuesMaps = true;
     keys1 = [...value1.keys()];
     keys2 = [...value2.keys()];
   } else {
     // It's a "normal" object
-    keys1 = Object.keys(value1);
-    keys2 = Object.keys(value2);
+    keys1 = Object.keys(value1 as object);
+    keys2 = Object.keys(value2 as object);
   }
 
   // get both key lists and check length
@@ -149,8 +177,16 @@ function _areEquivalent(value1: any, value2: any, stack: any[]) {
   // Ensure perfect match across all values
   for (let i = 0; i < numKeys; i++) {
     const currentKey = keys1[i];
-    const keyValue1 = isMap ? value1.get(currentKey) : value1[currentKey];
-    const keyValue2 = isMap ? value2.get(currentKey) : value2[currentKey];
+
+    let keyValue1: unknown, keyValue2: unknown;
+
+    if (areValuesMaps) {
+      keyValue1 = (value1 as Map<unknown, unknown>).get(currentKey);
+      keyValue2 = (value2 as Map<unknown, unknown>).get(currentKey);
+    } else {
+      keyValue1 = (value1 as Record<string, unknown>)[currentKey];
+      keyValue2 = (value2 as Record<string, unknown>)[currentKey];
+    }
 
     if (!_areEquivalent(keyValue1, keyValue2, stack)) {
       return false;
@@ -165,6 +201,6 @@ function _areEquivalent(value1: any, value2: any, stack: any[]) {
   return true;
 }
 
-export function areEquivalent(value1: any, value2: any) {
+export function areEquivalent(value1: unknown, value2: unknown) {
   return _areEquivalent(value1, value2, []);
 }

@@ -1,6 +1,6 @@
 import { resolve } from "path";
-import { defineConfig } from 'vite';
-import preact from '@preact/preset-vite';
+import { defineConfig } from "vite";
+import preact from "@preact/preset-vite";
 import dts from "vite-plugin-dts";
 
 // https://vite.dev/config/
@@ -19,12 +19,12 @@ export default defineConfig({
       fileName: "with-dom",
     },
     rollupOptions: {
-      external: ['preact'],
+      external: ["preact"],
       output: {
         globals: {
-          preact: 'preact',
-        }
-      }
+          preact: "preact",
+        },
+      },
     },
   },
 });
