@@ -42,7 +42,7 @@ function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
   // (only way they can still be equivalent but not equal)
   if (isNumber(value1)) {
     // Failed initial equals test, but could still both be NaN
-    return (isNaN(value1) && isNaN(value2 as number));
+    return isNaN(value1) && isNaN(value2 as number);
   }
 
   // Special case for function: check for toString() equivalence
@@ -55,7 +55,10 @@ function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
 
   // For these types, cannot still be equal at this point, so fast-fail
   if (
-    isBigInt(value1) || isBoolean(value1) || isString(value1) || isSymbol(value1)
+    isBigInt(value1) ||
+    isBoolean(value1) ||
+    isString(value1) ||
+    isSymbol(value1)
   ) {
     return false;
   }
@@ -67,7 +70,8 @@ function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
       return false;
     }
     // Convert to number to compare
-    const asNum1 = +value1, asNum2 = +value2;
+    const asNum1 = +value1,
+      asNum2 = +value2;
     // Check if both invalid (NaN) or are same value
     return asNum1 === asNum2 || (isNaN(asNum1) && isNaN(asNum2));
   }
@@ -173,7 +177,7 @@ function _areEquivalent(value1: unknown, value2: unknown, stack: unknown[]) {
   // Ensure perfect match across all values
   for (let i = 0; i < numKeys; i++) {
     const currentKey = keys1[i];
-  
+
     let keyValue1: unknown, keyValue2: unknown;
 
     if (areValuesMaps) {

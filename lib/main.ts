@@ -3,28 +3,44 @@ import { currentComponent } from "./preact_integration";
 import { castDraft, enableMapSet, Immutable, produce } from "immer";
 import { Component } from "preact";
 import { areEquivalent } from "./areEquivalent";
-import { AppState, EffectHandlerFn, EffectHandlerIdentifier, Identifier, InternalSubscriptionValue, SideEffect, SideEffectFn, SideEffectIdentifier, Subscriber, SubscriberFn, SubscriberIdentifier, SubscriptionValue } from "./types";
+import {
+  AppState,
+  EffectHandlerFn,
+  EffectHandlerIdentifier,
+  Identifier,
+  InternalSubscriptionValue,
+  SideEffect,
+  SideEffectFn,
+  SideEffectIdentifier,
+  Subscriber,
+  SubscriberFn,
+  SubscriberIdentifier,
+  SubscriptionValue,
+} from "./types";
 
 enableMapSet();
 
 let appState: AppState = new Map();
-let subscribers: Immutable<Map<SubscriberIdentifier, Subscriber<unknown, unknown>>> = new Map();
+let subscribers: Immutable<
+  Map<SubscriberIdentifier, Subscriber<unknown, unknown>>
+> = new Map();
 let sideEffects: Immutable<Map<SideEffectIdentifier, SideEffect>> = new Map();
-let effectHandlers: Immutable<Map<EffectHandlerIdentifier, EffectHandlerFn>> = new Map();
+let effectHandlers: Immutable<Map<EffectHandlerIdentifier, EffectHandlerFn>> =
+  new Map();
 let subscriberToComponents: Immutable<Map<Identifier, Component[]>> = new Map();
 
 function registerSubscriber<T>(
-  fn: SubscriberFn<AppState, T>
+  fn: SubscriberFn<AppState, T>,
 ): SubscriberIdentifier;
 
 function registerSubscriber<T, R>(
   deps: SubscriberIdentifier[],
-  fn: SubscriberFn<T, R>
+  fn: SubscriberFn<T, R>,
 ): SubscriberIdentifier;
 
 function registerSubscriber<T, R>(
   depsOrFn: SubscriberIdentifier[] | SubscriberFn<T, R>,
-  fn?: SubscriberFn<T, R>
+  fn?: SubscriberFn<T, R>,
 ): SubscriberIdentifier {
   const id = Symbol("with-dom-subscriber");
 
@@ -59,40 +75,43 @@ function registerSideEffect(fn: SideEffectFn): SideEffectIdentifier {
 }
 
 function getSubscriberDirectChildren(
-  subscriber: Immutable<Subscriber<unknown, unknown>>
+  subscriber: Immutable<Subscriber<unknown, unknown>>,
 ): Immutable<Subscriber<unknown, unknown>[]> {
-  return [
-    ...subscribers.values(),
-  ].filter(s => s.dependsOn.includes(subscriber.id));
+  return [...subscribers.values()].filter((s) =>
+    s.dependsOn.includes(subscriber.id),
+  );
 }
 
 function getAllSubscribersChildren(
-  subscribers: Immutable<Subscriber<unknown, unknown>[]>
+  subscribers: Immutable<Subscriber<unknown, unknown>[]>,
 ): Immutable<Subscriber<unknown, unknown>[]> {
-  return subscribers.reduce((acc, subscriber) => {
+  return subscribers.reduce(
+    (acc, subscriber) => {
+      // TODO: Verify stack overflow
 
-    // TODO: Verify stack overflow
+      return produce(acc, (acc) => {
+        const directChildren = getSubscriberDirectChildren(subscriber);
+        acc.push(...castDraft(directChildren));
 
-    return produce(acc, (acc) => {
-      const directChildren = getSubscriberDirectChildren(subscriber);
-      acc.push(...castDraft(directChildren));
-
-      const allChildren = getAllSubscribersChildren(directChildren);
-      acc.push(...castDraft(allChildren));
-    });
-  }, [] as Immutable<Subscriber<unknown, unknown>[]>);
+        const allChildren = getAllSubscribersChildren(directChildren);
+        acc.push(...castDraft(allChildren));
+      });
+    },
+    [] as Immutable<Subscriber<unknown, unknown>[]>,
+  );
 }
 
 const updateAppState = registerSideEffect((newState: AppState) => {
   if (appState === newState) {
     console.error(
-      "\"updateAppState\" has been called without unknown modification.\n" +
-      "This is a bad smell and could lead to potential performance issues."
+      '"updateAppState" has been called without unknown modification.\n' +
+        "This is a bad smell and could lead to potential performance issues.",
     );
   }
 
-
-  const rootSubs = [...subscribers.values()].filter(s => s.dependsOn.length === 0);
+  const rootSubs = [...subscribers.values()].filter(
+    (s) => s.dependsOn.length === 0,
+  );
 
   let outdatedSubs: Immutable<Subscriber<unknown, unknown>[]> = [];
 
@@ -102,7 +121,7 @@ const updateAppState = registerSideEffect((newState: AppState) => {
    */
   // TODO: Optimize by computing only the root subs that have some subscribers
   //       in their tree
-  const updatedRootSubs = rootSubs.map(rootSub => {
+  const updatedRootSubs = rootSubs.map((rootSub) => {
     const newValue = rootSub.fn(newState);
 
     if (!areEquivalent(rootSub.value, newValue)) {
@@ -111,10 +130,10 @@ const updateAppState = registerSideEffect((newState: AppState) => {
       });
 
       // TODO: Fix, does not work
-      rootSub.components.forEach(c => c.setState({}));
+      rootSub.components.forEach((c) => c.setState({}));
 
       if (subscriberToComponents.has(rootSub.id)) {
-        subscriberToComponents.get(rootSub.id)?.forEach(c => c.setState({}));
+        subscriberToComponents.get(rootSub.id)?.forEach((c) => c.setState({}));
       }
     }
 
@@ -126,29 +145,34 @@ const updateAppState = registerSideEffect((newState: AppState) => {
   });
 
   subscribers = produce(subscribers, (subscribers) => {
-    updatedRootSubs.forEach(el => {
+    updatedRootSubs.forEach((el) => {
       subscribers.set(el.id, castDraft(el));
     });
   });
 
   const allOutdatedSubs = outdatedSubs.concat(
-    ...getAllSubscribersChildren(outdatedSubs)
+    ...getAllSubscribersChildren(outdatedSubs),
   );
 
   subscribers = produce(subscribers, (subscribers) => {
-    allOutdatedSubs.forEach(outdatedSub => {
-      outdatedSub.components.forEach(c => c.setState({}));
+    allOutdatedSubs.forEach((outdatedSub) => {
+      outdatedSub.components.forEach((c) => c.setState({}));
 
       if (subscriberToComponents.has(outdatedSub.id)) {
-        subscriberToComponents.get(outdatedSub.id)?.forEach(c => c.setState({}));
+        subscriberToComponents
+          .get(outdatedSub.id)
+          ?.forEach((c) => c.setState({}));
       }
 
-      subscribers.set(outdatedSub.id, castDraft({
-        ...outdatedSub,
-        isOutdated: true,
-        value: undefined,
-      }));
-    })
+      subscribers.set(
+        outdatedSub.id,
+        castDraft({
+          ...outdatedSub,
+          isOutdated: true,
+          value: undefined,
+        }),
+      );
+    });
   });
 
   appState = newState;
@@ -178,7 +202,7 @@ function executeSideEffect(id: SideEffectIdentifier, ...args: unknown[]): void {
 
 // TODO: How to make it work with type validation?
 function dispatchEvent(id: EffectHandlerIdentifier, ...args: unknown[]): void {
-  // TODO: should probably be added to a stack to be ensure that each event 
+  // TODO: should probably be added to a stack to be ensure that each event
   //       is processed only when the previous one is completely finished
   //       i.e. make sure that the rendering happened too
 
@@ -200,35 +224,34 @@ function dispatchEvent(id: EffectHandlerIdentifier, ...args: unknown[]): void {
  * The order of the output matters: from the root of the tree to the leaves
  */
 function getAllDependencies(
-  subs: Immutable<Subscriber<unknown, unknown>[]>
+  subs: Immutable<Subscriber<unknown, unknown>[]>,
 ): Immutable<Subscriber<unknown, unknown>[]> {
-  return subs.reduce((acc, el) => {
-    const parents = el.dependsOn.map(s => {
-      const parent = subscribers.get(s);
+  return subs.reduce(
+    (acc, el) => {
+      const parents = el.dependsOn.map((s) => {
+        const parent = subscribers.get(s);
 
-      if (!parent) {
-        throw Error("error");
-      }
+        if (!parent) {
+          throw Error("error");
+        }
 
-      return parent;
-    });
+        return parent;
+      });
 
-    return produce(acc, (acc) => {
-      acc.push(...castDraft(parents));
-      acc.push(...castDraft(getAllDependencies(parents)));
-    });
-  }, [] as Immutable<Subscriber<unknown, unknown>[]>);
-
+      return produce(acc, (acc) => {
+        acc.push(...castDraft(parents));
+        acc.push(...castDraft(getAllDependencies(parents)));
+      });
+    },
+    [] as Immutable<Subscriber<unknown, unknown>[]>,
+  );
 
   // TODO: Put back this, but working:
   const directDeps = subs
-    .flatMap(sub => sub.dependsOn.map(subId => subscribers.get(subId)))
-    .filter(sub => !!sub);
+    .flatMap((sub) => sub.dependsOn.map((subId) => subscribers.get(subId)))
+    .filter((sub) => !!sub);
 
-  return [
-    ...getAllDependencies(directDeps),
-    ...directDeps,
-  ];
+  return [...getAllDependencies(directDeps), ...directDeps];
 }
 
 function computeAllDependenciesValues(
@@ -238,7 +261,7 @@ function computeAllDependenciesValues(
   const allParents = getAllDependencies([subscriber]);
 
   return produce(subscribers, (subscribers) => {
-    [...allParents].reverse().forEach(parent => {
+    [...allParents].reverse().forEach((parent) => {
       if (!parent.isOutdated) {
         return;
       }
@@ -252,30 +275,32 @@ function computeAllDependenciesValues(
         return;
       }
 
-      const parents = parent.dependsOn.map(id => subscribers.get(id));
+      const parents = parent.dependsOn.map((id) => subscribers.get(id));
 
       subscribers.set(parent.id, {
         ...castDraft(parent),
-        value: parent.fn(parents.map(el => el?.value)), // TODO: There is something wrong with args
+        value: parent.fn(parents.map((el) => el?.value)), // TODO: There is something wrong with args
         isOutdated: false,
       });
     });
   });
 }
 
-function computeSubscriberValue(subscriber: Immutable<Subscriber<unknown, unknown>>, ...args: unknown[]): unknown {
+function computeSubscriberValue(
+  subscriber: Immutable<Subscriber<unknown, unknown>>,
+  ...args: unknown[]
+): unknown {
   const updatedDeps = computeAllDependenciesValues(subscriber); // TODO: args
 
-  const directDeps = subscriber.dependsOn.map(id => updatedDeps.get(id));
+  const directDeps = subscriber.dependsOn.map((id) => updatedDeps.get(id));
 
-  const state = directDeps.length === 0
-    ? appState
-    : directDeps.map(el => el?.value);
+  const state =
+    directDeps.length === 0 ? appState : directDeps.map((el) => el?.value);
 
   const value = subscriber.fn(state, ...args);
 
   subscribers = produce(subscribers, (subscribers) => {
-    updatedDeps.forEach(u => {
+    updatedDeps.forEach((u) => {
       subscribers.set(u.id, castDraft(u));
     });
 
@@ -310,7 +335,6 @@ function subscribe<T>(
   }
 
   if (currentComponent !== undefined) {
-
     // TODO: Does not work, but the code would be cleaner with this
     //subscribers = produce(subscribers, (subscribers) => {
     //  subscribers.set(subscriberId, {
@@ -325,11 +349,14 @@ function subscribe<T>(
 
     const draftComponent = castDraft(currentComponent);
 
-    subscriberToComponents = produce(subscriberToComponents, (subscriberToComponents) => {
-      const prev = subscriberToComponents.get(subscriberId) ?? [];
-      prev.push(draftComponent);
-      subscriberToComponents.set(subscriberId, prev);
-    });
+    subscriberToComponents = produce(
+      subscriberToComponents,
+      (subscriberToComponents) => {
+        const prev = subscriberToComponents.get(subscriberId) ?? [];
+        prev.push(draftComponent);
+        subscriberToComponents.set(subscriberId, prev);
+      },
+    );
   } else {
     // TODO: Allow to call with a callback fn instead
     console.warn("Subscribe was called outside a reactive context.");

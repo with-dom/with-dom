@@ -30,7 +30,11 @@ interface OptionsType {
   [OptionsTypes.DIFFED](vnode: VNode): void;
 
   [OptionsTypes.RENDER](vnode: VNode): void;
-  [OptionsTypes.CATCH_ERROR](error: unknown, vnode: VNode, oldVNode: VNode): void;
+  [OptionsTypes.CATCH_ERROR](
+    error: unknown,
+    vnode: VNode,
+    oldVNode: VNode,
+  ): void;
   [OptionsTypes.UNMOUNT](vnode: VNode): void;
 }
 
@@ -39,26 +43,32 @@ type HookFn<T extends keyof OptionsType> = (
   ...a: Parameters<OptionsType[T]>
 ) => ReturnType<OptionsType[T]>;
 
-
 function hook<T extends OptionsTypes>(hookName: T, hookFn: HookFn<T>) {
   // @ts-expect-error private options hooks usage
-  options[hookName] = hookFn.bind(null, options[hookName] || (() => {
-    // do nothing.
-  }));
+  options[hookName] = hookFn.bind(
+    null,
+    options[hookName] ||
+      (() => {
+        // do nothing.
+      }),
+  );
 }
 
-function isWithDomSubscription(object: unknown): object is InternalSubscriptionValue<unknown> {
+function isWithDomSubscription(
+  object: unknown,
+): object is InternalSubscriptionValue<unknown> {
   if (object == null || typeof object !== "object") {
     return false;
   }
 
-  return (object as InternalSubscriptionValue<unknown>)["__type"] === "with-dom_subscription";
+  return (
+    (object as InternalSubscriptionValue<unknown>)["__type"] ===
+    "with-dom_subscription"
+  );
 }
 
 function replaceWithDomSubscription(propValue: unknown) {
-  return isWithDomSubscription(propValue)
-    ? propValue.value + ""
-    : propValue;
+  return isWithDomSubscription(propValue) ? propValue.value + "" : propValue;
 }
 
 hook(OptionsTypes.DIFF, (old, vnode) => {
@@ -73,7 +83,7 @@ hook(OptionsTypes.DIFF, (old, vnode) => {
       if (propName === "children" && Array.isArray(props[propName])) {
         props[propName] = props[propName].map(replaceWithDomSubscription);
       } else if (isWithDomSubscription(propValue)) {
-      /* eslint-disable  @typescript-eslint/no-explicit-any */
+        /* eslint-disable  @typescript-eslint/no-explicit-any */
         (props as any)[propName] = propValue.value + "";
       }
     }
@@ -98,6 +108,4 @@ hook(OptionsTypes.DIFFED, (old, vnode) => {
 
 // TODO: Optimize "componentShouldUpdate" hook
 
-export {
-  currentComponent
-};
+export { currentComponent };

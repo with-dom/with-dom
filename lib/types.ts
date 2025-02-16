@@ -1,7 +1,7 @@
 import { Immutable } from "immer";
 import { Component } from "preact";
 
-export type WithDomTypeIdentifier = "with-dom_subscription"
+export type WithDomTypeIdentifier = "with-dom_subscription";
 
 export type AppState = Immutable<Map<string | symbol, unknown>>;
 export type Identifier = symbol;
@@ -31,7 +31,10 @@ export interface SideEffect {
 }
 
 export type EffectHandlerResponse = Readonly<Record<Identifier, unknown>>;
-export type EffectHandlerFn = (appState: AppState, ...args: unknown[]) => EffectHandlerResponse;
+export type EffectHandlerFn = (
+  appState: AppState,
+  ...args: unknown[]
+) => EffectHandlerResponse;
 
 /**
  * Specific to preact
