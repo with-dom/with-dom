@@ -4,10 +4,10 @@ import {
   getSubscriberDirectChildren,
   registerSubscriber,
   subscribe,
-} from "../lib/subscribers";
-import { AppState } from "../lib/types";
-import { initialize } from "../lib";
-import { libraryState } from "../lib/library_state";
+} from "../../lib/core/subscribers";
+import { AppState } from "../../lib/types";
+import { initialize } from "../../lib";
+import { libraryState } from "../../lib/core/library_state";
 
 beforeEach(() => {
   initialize({});

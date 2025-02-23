@@ -5,16 +5,35 @@ import {
   SubscriberFn,
   SubscriberIdentifier,
   SubscriptionValue,
-} from "./types";
-import { currentComponent } from "./preact_integration";
+} from "../types";
+import { currentComponent } from "../integrations/preact_integration";
 import { libraryState } from "./library_state";
 
 // TODO: What if "dependsOn" directly held references to subs (and not just ids)?
 
+/**
+ * Register a root Subscriber, i.e. a Subscriber with no dependencies.
+ *
+ * @remarks all root Subscribers will be computed every time the app state
+ * changes, they should be as light as possible.
+ *
+ * @returns the id of the registered Subscriber.
+ */
 function registerSubscriber<T>(
   fn: SubscriberFn<typeof libraryState.appState, T>,
 ): SubscriberIdentifier;
 
+/**
+ * Register a Subscriber that depends on other Subscribers.
+ *
+ * @remarks These Subscribers will be run only when one of their dependencies
+ * return a new value.
+ *
+ * @param deps - an array containing the ids of the Subscribers this Subscriber
+ * depends on.
+ *
+ * @returns the id of the registered Subscriber.
+ */
 function registerSubscriber<T, R>(
   deps: SubscriberIdentifier[],
   fn: SubscriberFn<T, R>,
@@ -187,6 +206,15 @@ function formatSubscriptionValue<T>(value: T): InternalSubscriptionValue<T> {
   };
 }
 
+/**
+ * Returns the latest value of a Subscriber.
+ *
+ * @remarks
+ * It should only be called in a reactive context
+ *
+ * @param subscriberId - the id of the Subscriber to subscribe to
+ * @returns a SubscriptionValue containing the latest value
+ */
 function subscribe<T>(
   subscriberId: SubscriberIdentifier,
   ...args: unknown[]
