@@ -1,28 +1,28 @@
 import { assert, expect, test, vi } from "vitest";
-import { executeFx, registerCoreFx, registerFx } from "../lib/side_effects";
-import { libraryState } from "../lib/library_state";
+import { executeFx, registerCoreFx, registerFx } from "../../lib/core/fxs";
+import { libraryState } from "../../lib/core/library_state";
 
 test("registerCoreFx registers a core fx", () => {
-  const initialFxSize = libraryState.effects.size;
+  const initialFxSize = libraryState.fxs.size;
 
   const fxId = Symbol();
   const fxFn = () => {};
 
   registerCoreFx(fxId, fxFn);
 
-  expect(libraryState.effects.size).toBe(initialFxSize + 1);
-  expect(libraryState.effects.get(fxId)).toBe(fxFn);
+  expect(libraryState.fxs.size).toBe(initialFxSize + 1);
+  expect(libraryState.fxs.get(fxId)).toBe(fxFn);
 });
 
 test("registerFx registers an fx", () => {
-  const initialFxSize = libraryState.effects.size;
+  const initialFxSize = libraryState.fxs.size;
 
   const fxFn = () => {};
 
   const fxId = registerFx(fxFn);
 
-  expect(libraryState.effects.size).toBe(initialFxSize + 1);
-  expect(libraryState.effects.get(fxId)).toBe(fxFn);
+  expect(libraryState.fxs.size).toBe(initialFxSize + 1);
+  expect(libraryState.fxs.get(fxId)).toBe(fxFn);
 });
 
 test("executeFx throws if the fx is not found", () => {

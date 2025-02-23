@@ -7,10 +7,10 @@ import {
   registerSubscriber,
   updateAppState,
 } from "../../lib";
-import { areEquivalent } from "../../lib/are_equivalent";
-import { getSubscriber, subscribe } from "../../lib/subscribers";
+import { areEquivalent } from "../../lib/utils/are_equivalent";
+import { getSubscriber, subscribe } from "../../lib/core/subscribers";
 import { produce } from "immer";
-import { libraryState } from "../../lib/library_state";
+import { libraryState } from "../../lib/core/library_state";
 
 beforeEach(() => {
   initialize({});

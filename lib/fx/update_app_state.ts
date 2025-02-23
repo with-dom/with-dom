@@ -1,15 +1,18 @@
 import { castDraft, produce } from "immer";
-import { registerCoreFx } from "../side_effects";
+import { registerCoreFx } from "../core/fxs";
 import {
   getAllSubscribersChildren,
   getRootSubscribers,
   getSubscriberDirectChildren,
   updateSubscribers,
-} from "../subscribers";
+} from "../core/subscribers";
 import { Subscriber } from "../types";
-import { areEquivalent } from "../are_equivalent";
-import { libraryState } from "../library_state";
+import { areEquivalent } from "../utils/are_equivalent";
+import { libraryState } from "../core/library_state";
 
+/**
+ * Updates the appState to the provided value.
+ */
 const identifier = Symbol.for("with-dom/fx/updateAppState");
 
 const registerUpdateAppState = () => {

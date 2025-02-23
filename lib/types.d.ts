@@ -4,8 +4,8 @@ export type WithDomTypeIdentifier = "with-dom_subscription";
 
 export type Identifier = symbol;
 export type SubscriberIdentifier = Identifier;
-export type SideEffectIdentifier = Identifier;
-export type EffectHandlerIdentifier = Identifier;
+export type FxIdentifier = Identifier;
+export type FxHandlerIdentifier = Identifier;
 export interface SubscriptionValue<T> {
   readonly value: T;
 }
@@ -22,18 +22,18 @@ export interface Subscriber<T, R> {
 
 // TODO: remove the any
 /* eslint-disable  @typescript-eslint/no-explicit-any */
-export type SideEffectFn = (...args: any[]) => void;
+export type FxFn = (...args: any[]) => void;
 
-export type EffectHandlerResponse = Readonly<Record<Identifier, unknown>>;
-export type EffectHandlerFn = (
+export type FxHandlerResponse = Readonly<Record<Identifier, unknown>>;
+export type FxHandlerFn = (
   appState: AppState,
   ...args: unknown[]
-) => EffectHandlerResponse;
+) => FxHandlerResponse;
 
 export interface WithDomConfiguration {
   readonly appState?: AppState;
-  readonly effectHandlers?: Map<EffectHandlerIdentifier, EffectHandlerFn>;
-  readonly effects?: Map<SideEffectIdentifier, SideEffectFn>;
+  readonly effectHandlers?: Map<FxHandlerIdentifier, FxHandlerFn>;
+  readonly effects?: Map<FxIdentifier, FxFn>;
   readonly subscribers?: Map<
     SubscriberIdentifier,
     Subscriber<unknown, unknown>
@@ -41,16 +41,20 @@ export interface WithDomConfiguration {
 }
 
 type AppState = ReadonlyMap<string | symbol, unknown>;
-type EffectHandlers = ReadonlyMap<EffectHandlerIdentifier, EffectHandlerFn>;
-type Effects = ReadonlyMap<SideEffectIdentifier, SideEffectFn>;
+type FxHandlers = ReadonlyMap<FxHandlerIdentifier, FxHandlerFn>;
+type Fxs = ReadonlyMap<FxIdentifier, FxFn>;
 type Subscribers = ReadonlyMap<
   SubscriberIdentifier,
   Subscriber<unknown, unknown>
 >;
+
+/**
+ * References all of the internal state variables of the library.
+ */
 export interface LibraryState {
   appState: AppState;
-  effectHandlers: EffectHandlers;
-  effects: Effects;
+  fxHandlers: FxHandlers;
+  fxs: Fxs;
   subscribers: Subscribers;
   subscriberToComponents: ReadonlyMap<SubscriberIdentifier, Component[]>;
 }

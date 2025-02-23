@@ -1,5 +1,5 @@
 import { Component, options } from "preact";
-import { InternalSubscriptionValue } from "./types";
+import { InternalSubscriptionValue } from "../types";
 
 /**
  * Holds the reference to the currently rendered component.

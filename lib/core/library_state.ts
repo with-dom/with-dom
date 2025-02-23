@@ -1,4 +1,4 @@
-import { LibraryState } from "./types";
+import { LibraryState } from "../types";
 
 let libraryState: LibraryState;
 

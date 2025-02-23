@@ -1,5 +1,5 @@
 import { expect, suite, test } from "vitest";
-import { areEquivalent } from "../lib/are_equivalent";
+import { areEquivalent } from "../../lib/utils/are_equivalent";
 
 suite("areEquivalent", () => {
   suite("Primitive types", () => {
