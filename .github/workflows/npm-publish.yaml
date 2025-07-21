@@ -11,8 +11,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,4 +37,4 @@ jobs:
           yarn version --patch --no-git-tag-version
           git add .
           git commit -m "chore: bump version to next patch version"
-          git push origin ${{ env.BRANCH_NAME }}
+          git push origin HEAD:master ${{ env.BRANCH_NAME }}
